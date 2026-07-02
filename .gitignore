@@ -216,3 +216,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Certificats (NE PAS PARTAGER SUR GITHUB)
+*.key
+*.pem
+*.crt
+*.csr
+*.srl
+
+# Captures réseau
+*.pcap
+*.pcapng
+
+# Fichiers temporaires
+*.swp
+*.swo
+
+# Fichiers de configuration locaux
+.env.local
+.env.*.local
