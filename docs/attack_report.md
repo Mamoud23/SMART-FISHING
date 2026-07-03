@@ -15,16 +15,16 @@ L'attaquant utilise un outil (ici un script Python) qui s'abonne à tous les top
 Sans authentification, il peut lire toutes les données en clair.
 
 ### Broker vulnérable
-![Broker vulnerable](images/Smart-Fishing_Brocker_Vulnerable.png)
+![Broker vulnérable](images/Smart-Fishing_Brocker Vulnerable.png)
 
 ### Attaque en cours
 ![Sniffing attaque](images/Smart-Fishing_Sniffing_Attaque.png)
 
 ### Message capturé
-![Sniffing message capture](images/Smart-Fishing_Sniffing_Message_Capture.png)
+![Sniffing message capturé](images/Smart-Fishing_Sniffing_Message Capture.png)
 
 ### Message publié
-![Sniffing message publie](images/Smart-Fishing_Sniffing_Message_publie.png)
+![Sniffing message publié](images/Smart-Fishing_Sniffing_Message publié.png)
 
 ### Preuve
 
@@ -57,7 +57,7 @@ L'attaquant se connecte au broker avec le Client ID d'un capteur réel. Le broke
 ![Spoofing attaque](images/Smart-Fishing_Spoofing_Attaque.png)
 
 ### Message capturé
-![Spoofing message capture](images/Smart-Fishing_Spoofing_Message_Capture.png)
+![Spoofing message capturé](images/Smart-Fishing_Spoofing_Message Capture.png)
 
 ### Message publié
 ![Spoofing message publie](images/Smart-Fishing_Spoofing_Message_Publie.png)
