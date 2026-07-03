@@ -15,16 +15,16 @@ L'attaquant utilise un outil (ici un script Python) qui s'abonne à tous les top
 Sans authentification, il peut lire toutes les données en clair.
 
 ### Broker vulnérable
-![Broker vulnérable](images/Smart-Fishing_Brocker_Vulnérable.png)
+![Broker vulnérable](images/Smart-Fishing_Brocker_Vulnerable.png)
 
 ### Attaque en cours
 ![Sniffing attaque](images/Smart-Fishing_Sniffing_Attaque.png)
 
 ### Message capturé
-![Sniffing message capturé](images/Smart-Fishing_Sniffing_Message_Capturé.png)
+![Sniffing message capturé](images/Smart-Fishing_Sniffing_Message_Capture.png)
 
 ### Message publié
-![Sniffing message publié](images/Smart-Fishing_Sniffing_Message_publié.png)
+![Sniffing message publié](images/Smart-Fishing_Sniffing_Message_publie.png)
 
 ### Preuve
 
@@ -57,10 +57,10 @@ L'attaquant se connecte au broker avec le Client ID d'un capteur réel. Le broke
 ![Spoofing attaque](images/Smart-Fishing_Spoofing_Attaque.png)
 
 ### Message capturé
-![Spoofing message capturé](images/Smart-Fishing_Spoofing_Message_Capturé.png)
+![Spoofing message capturé](images/Smart-Fishing_Spoofing_Message_Capture.png)
 
 ### Message publié
-![Spoofing message publié](images/Smart-Fishing_Spoofing_Message_Publié.png)
+![Spoofing message publié](images/Smart-Fishing_Spoofing_Message_Publie.png)
 
 ### Preuve
 
@@ -93,10 +93,10 @@ Il le rejoue 5 fois (ou plus) sur le broker
 ![Replay attaque](images/Smart-Fishing_Replay_Attaque.png)
 
 ### Message capturé
-![Replay message capturé](images/Smart-Fishing_Replay_Message_Capturé.png)
+![Replay message capturé](images/Smart-Fishing_Replay_Message_Capture.png)
 
 ### Message publié
-![Replay message publié](images/Smart-Fishing_Replay_Message_Publié.png)
+![Replay message publié](images/Smart-Fishing_Replay_Message_Publie.png)
 
 ### Preuve
 
@@ -130,10 +130,10 @@ Le MITM consiste à s'interposer entre le capteur et le broker pour intercepter 
 ![MITM modification](images/Smart-Fishing_MITM_Attaque_Modification_de_Message.png)
 
 ### Message publié
-![MITM message publié](images/Smart-Fishing_MITM_Message_publié.png)
+![MITM message publié](images/Smart-Fishing_MITM_Message_publie.png)
 
 ### Message modifié
-![MITM message modifié](images/Smart-Fishing_MITM_Message_Modifié.png)
+![MITM message modifié](images/Smart-Fishing_MITM_Message_Modifie.png)
 
 ### Preuve
 
