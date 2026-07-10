@@ -1,0 +1,15 @@
+services:
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+      - grafana
+    environment:
+      - VITE_API_URL=http://api:8000
+      - VITE_WS_URL=ws://api:8000/ws
+    networks:
+      - iot-network
