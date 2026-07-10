@@ -87,6 +87,20 @@ text
 
 ---
 
+## 🚀 Compilation
+Builder et lancer toute la stack
+docker compose up --build
+
+Vérifier les réponse
+docker compose ps
+
+logger les services
+docker compose logs -f api        # logs d'un service précis
+docker compose logs -f dashboard
+
+Arreter toute la stack
+docker compose down -v
+
 ## 🚀 Installation
 
 ```bash

@@ -1,7 +1,11 @@
 // src/services/websocket.js
 import { io } from 'socket.io-client';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+// Attention : pas de suffixe type "/ws" ici. Avec Socket.IO, tout ce qui suit
+// l'origine dans l'URL est interprete comme un NAMESPACE, pas un chemin.
+// On passe juste l'origine (protocole + host + port), le protocole /socket.io/
+// est gere en interne par la librairie.
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
 
 class WebSocketService {
   constructor() {
