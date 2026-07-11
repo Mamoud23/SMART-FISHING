@@ -1,43 +1,22 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+from app.routers import bateaux, alertes_sos, telemetrie, captures, pecheurs, auth
 
 app = FastAPI(
     title="Smart Fishing API",
-    description="Backend pour le suivi des pêches artisanales et la sécurité des pêcheurs",
-    version="1.0.0"
+    description="Suivi des pêches artisanales et sécurité des pêcheurs",
+    version="0.1.0",
 )
 
-# CORS - Important pour que React puisse appeler l'API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],           # Change en production par ["http://localhost:5173"]
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.include_router(auth.router)
+app.include_router(bateaux.router)
+app.include_router(alertes_sos.router)
+app.include_router(telemetrie.router)
+app.include_router(captures.router)
+app.include_router(pecheurs.router)
 
-# Route de bienvenue
-@app.get("/")
-async def root():
-    return {
-        "message": "🚀 Smart Fishing Backend est opérationnel !",
-        "team": "DEMBELE - Backend & Bases de Données",
-        "status": "OK"
-    }
 
-# Route de santé
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "database": "pending connection",
-        "cache": "pending connection"
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+@app.get("/health", tags=["Santé"])
+async def health():
+    """Endpoint de vérification rapide (utilisé par Docker healthcheck / monitoring)."""
+    return {"status": "ok"}

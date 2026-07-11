@@ -1,0 +1,209 @@
+version: "3.9"
+
+services:
+
+  # ---------- MongoDB : Réplica Set 3 nœuds ----------
+  # ---------- MongoDB : Réplica Set 3 nœuds ----------
+  mongo1:
+    image: mongo:4.4
+    container_name: mongo1
+    restart: unless-stopped
+    command: >
+      sh -c "
+      mkdir -p /etc/mongo &&
+      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
+      chmod 400 /etc/mongo/mongodb.key &&
+      chown 999:999 /etc/mongo/mongodb.key &&
+      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
+      "
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: bdgl2026
+    networks:
+      - smart_fishing_net
+
+  mongo2:
+    image: mongo:4.4
+    container_name: mongo2
+    restart: unless-stopped
+    command: >
+      sh -c "
+      mkdir -p /etc/mongo &&
+      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
+      chmod 400 /etc/mongo/mongodb.key &&
+      chown 999:999 /etc/mongo/mongodb.key &&
+      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
+      "
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_data:/data/db
+    networks:
+      - smart_fishing_net
+
+  mongo3:
+    image: mongo:4.4
+    container_name: mongo3
+    restart: unless-stopped
+    command: >
+      sh -c "
+      mkdir -p /etc/mongo &&
+      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
+      chmod 400 /etc/mongo/mongodb.key &&
+      chown 999:999 /etc/mongo/mongodb.key &&
+      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
+      "
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo3_data:/data/db
+    networks:
+      - smart_fishing_net
+  # ---------- InfluxDB ----------
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb1
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: bdgl2026
+      DOCKER_INFLUXDB_INIT_ORG: smart_fishing
+      DOCKER_INFLUXDB_INIT_BUCKET: telemetrie_peche
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: DL4RsU51lqxPvB7IGt_d2qg2oIeSFFwJ193lceny7N-SxCuaReSTManN1Xmp9oXBQYqqRyy7YLii56jJyGO2oA==
+    networks:
+      - smart_fishing_net
+
+  # ---------- Conteneur outils : pour lancer les scripts Python ----------
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.tools
+    container_name: sf_tools
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: ["tail", "-f", "/dev/null"]
+    env_file:
+      - .env
+    networks:
+      - smart_fishing_net
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+      - influxdb
+
+  # ---------- Redis : master + 2 replicas (IP statiques) ----------
+  redis-master:
+    image: redis:7.2
+    container_name: redis-master
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      smart_fishing_net:
+        ipv4_address: 172.28.0.10
+
+  redis-replica1:
+    image: redis:7.2
+    container_name: redis-replica1
+    command: ["redis-server", "--replicaof", "172.28.0.10", "6379"]
+    depends_on:
+      - redis-master
+    networks:
+      smart_fishing_net:
+        ipv4_address: 172.28.0.11
+
+  redis-replica2:
+    image: redis:7.2
+    container_name: redis-replica2
+    command: ["redis-server", "--replicaof", "172.28.0.10", "6379"]
+    depends_on:
+      - redis-master
+    networks:
+      smart_fishing_net:
+        ipv4_address: 172.28.0.12
+
+  # ---------- Redis Sentinel : 3 nœuds, quorum = 2 ----------
+  sentinel1:
+    image: redis:7.2
+    container_name: sentinel1
+    command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
+    volumes:
+      - ./sentinel/node1:/etc/sentinel
+    depends_on:
+      - redis-master
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - smart_fishing_net
+
+  sentinel2:
+    image: redis:7.2
+    container_name: sentinel2
+    command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
+    volumes:
+      - ./sentinel/node2:/etc/sentinel
+    depends_on:
+      - redis-master
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - smart_fishing_net
+
+  sentinel3:
+    image: redis:7.2
+    container_name: sentinel3
+    command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
+    volumes:
+      - ./sentinel/node3:/etc/sentinel
+    depends_on:
+      - redis-master
+      - redis-replica1
+      - redis-replica2
+    networks:
+      - smart_fishing_net
+
+  # ---------- API FastAPI ----------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: sf_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+      - influxdb
+      - redis-master
+      - sentinel1
+      - sentinel2
+      - sentinel3
+    networks:
+      - smart_fishing_net
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+  influxdb_data:
+
+networks:
+  smart_fishing_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
