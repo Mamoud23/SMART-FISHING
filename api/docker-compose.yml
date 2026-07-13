@@ -8,61 +8,41 @@ services:
     image: mongo:4.4
     container_name: mongo1
     restart: unless-stopped
-    command: >
-      sh -c "
-      mkdir -p /etc/mongo &&
-      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
-      chmod 400 /etc/mongo/mongodb.key &&
-      chown 999:999 /etc/mongo/mongodb.key &&
-      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
-      "
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongo1_data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: bdgl2026
     networks:
       - smart_fishing_net
-
+ 
   mongo2:
     image: mongo:4.4
     container_name: mongo2
     restart: unless-stopped
-    command: >
-      sh -c "
-      mkdir -p /etc/mongo &&
-      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
-      chmod 400 /etc/mongo/mongodb.key &&
-      chown 999:999 /etc/mongo/mongodb.key &&
-      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
-      "
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27018:27017"
     volumes:
       - mongo2_data:/data/db
     networks:
       - smart_fishing_net
-
+ 
   mongo3:
     image: mongo:4.4
+    
     container_name: mongo3
     restart: unless-stopped
-    command: >
-      sh -c "
-      mkdir -p /etc/mongo &&
-      echo 'bdgl2026SecretKeyReplicaSetSmartFishing' > /etc/mongo/mongodb.key &&
-      chmod 400 /etc/mongo/mongodb.key &&
-      chown 999:999 /etc/mongo/mongodb.key &&
-      mongod --replSet rs0 --bind_ip_all --auth --keyFile /etc/mongo/mongodb.key
-      "
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27019:27017"
     volumes:
       - mongo3_data:/data/db
     networks:
       - smart_fishing_net
+ 
+ 
+    
   # ---------- InfluxDB ----------
   influxdb:
     image: influxdb:2.7
@@ -78,7 +58,7 @@ services:
       DOCKER_INFLUXDB_INIT_PASSWORD: bdgl2026
       DOCKER_INFLUXDB_INIT_ORG: smart_fishing
       DOCKER_INFLUXDB_INIT_BUCKET: telemetrie_peche
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: DL4RsU51lqxPvB7IGt_d2qg2oIeSFFwJ193lceny7N-SxCuaReSTManN1Xmp9oXBQYqqRyy7YLii56jJyGO2oA==
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: BhvMTAanAUCzy3KTXxdJ14CDZpT1dJCzvALvHxl_q5SvfnpB3O30n5q34DoV8LPFlmRUuUoscHUxYbv1hZxjqw==
     networks:
       - smart_fishing_net
 

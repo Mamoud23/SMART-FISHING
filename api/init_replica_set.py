@@ -3,23 +3,16 @@ Initialise le replica set MongoDB (rs0) à partir de Python.
 À exécuter UNE SEULE FOIS, juste après le démarrage des 3 conteneurs.
 
 Utilisation :
-    python init_replica_set.py
+    docker exec -it sf_tools python init_replica_set.py
 """
 
 from pymongo import MongoClient
 import time
 
-ADMIN_USER = "admin"
-ADMIN_PASSWORD = "bdgl2026"
-
-# On se connecte à mongo1 directement (pas encore de replica set actif)
-client = MongoClient(
-    "mongodb://mongo1:27017/",
-    username=ADMIN_USER,
-    password=ADMIN_PASSWORD,
-    authSource="admin",
-    directConnection=True,
-)
+# Pas d'authentification : Mongo n'est jamais exposé publiquement (isolé
+# dans le réseau Docker), la sécurité réelle du projet est le JWT/RBAC
+# au niveau de FastAPI.
+client = MongoClient("mongodb://mongo1:27017/", directConnection=True)
 
 config = {
     "_id": "rs0",

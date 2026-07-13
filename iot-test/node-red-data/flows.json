@@ -1,0 +1,696 @@
+[
+    {
+        "id": "5a5e9947ec136ee8",
+        "type": "tab",
+        "label": "Flux 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "f85c39ec246c714c",
+        "type": "tab",
+        "label": "Flux 2",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "a0a659f2972f2724",
+        "type": "tab",
+        "label": "Smart Fishing - Pipeline complet",
+        "disabled": false,
+        "info": "Couvre les 7 capteurs. Le token JWT est récupéré au démarrage puis toutes les 50 minutes, stocké dans le contexte global (api_token), et réutilisé par chaque capteur protégé."
+    },
+    {
+        "id": "c56761bbbdfebd4d",
+        "type": "junction",
+        "z": "a0a659f2972f2724",
+        "x": 400,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "mqtt_broker_local2",
+        "type": "mqtt-broker",
+        "name": "Mosquitto local (test)",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true
+    },
+    {
+        "id": "632cb5994522109b",
+        "type": "inject",
+        "z": "a0a659f2972f2724",
+        "name": "Connexion (au démarrage + toutes les 50 min)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3000",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 60,
+        "wires": [
+            [
+                "de619092cd92d4bc"
+            ]
+        ]
+    },
+    {
+        "id": "de619092cd92d4bc",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire la requête de login",
+        "func": "msg.payload = \"username=noderd_system&password=bdgl2026\";\nmsg.headers = { \"content-type\": \"application/x-www-form-urlencoded\" };\nreturn msg;",
+        "outputs": 1,
+        "x": 470,
+        "y": 60,
+        "wires": [
+            [
+                "253304b8a90329b9"
+            ]
+        ]
+    },
+    {
+        "id": "253304b8a90329b9",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /auth/login",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api:8000/auth/login",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 700,
+        "y": 60,
+        "wires": [
+            [
+                "a5766340a7581dab"
+            ]
+        ]
+    },
+    {
+        "id": "a5766340a7581dab",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Stocker le token (global)",
+        "func": "if (msg.payload && msg.payload.access_token) {\n    global.set(\"api_token\", msg.payload.access_token);\n    node.status({fill:\"green\", shape:\"dot\", text:\"token à jour\"});\n} else {\n    node.status({fill:\"red\", shape:\"ring\", text:\"échec connexion\"});\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 60,
+        "wires": [
+            [
+                "7a0e6594ca879ebc"
+            ]
+        ]
+    },
+    {
+        "id": "7a0e6594ca879ebc",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat connexion",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1150,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "321780a7154152bd",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "GPS (fishing/boat/+/gps)",
+        "topic": "fishing/boat/+/gps",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 290,
+        "y": 160,
+        "wires": [
+            [
+                "e34c45a2cf7d41f9"
+            ]
+        ]
+    },
+    {
+        "id": "e34c45a2cf7d41f9",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire la ligne InfluxDB",
+        "func": "const parties = msg.topic.split('/');\nconst id_bateau = parties[2] || \"inconnu\";\nconst p = msg.payload || {};\n\nconst lat = Number(p.lat) || 0;\nconst lng = Number(p.lng) || 0;\nconst vitesse = Number(p.vitesse) || 0;\n\nconst ligne = `gps,id_bateau=${id_bateau} lat=${lat},lng=${lng},vitesse=${vitesse}`;\n\nmsg.payload = ligne;\nmsg.headers = {\n    \"Authorization\": \"Token BhvMTAanAUCzy3KTXxdJ14CDZpT1dJCzvALvHxl_q5SvfnpB3O30n5q34DoV8LPFlmRUuUoscHUxYbv1hZxjqw==\",\n    \"Content-Type\": \"text/plain\"\n};\n\nnode.status({fill:\"green\", shape:\"dot\", text:\"GPS → Influx\"});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 160,
+        "wires": [
+            [
+                "27a0dfed1590825b"
+            ]
+        ]
+    },
+    {
+        "id": "27a0dfed1590825b",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "Écrire dans InfluxDB",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://influxdb:8086/api/v2/write?org=smart_fishing&bucket=telemetrie_peche&precision=s",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 840,
+        "y": 160,
+        "wires": [
+            [
+                "36f7823df2c10a86"
+            ]
+        ]
+    },
+    {
+        "id": "36f7823df2c10a86",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat GPS",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1080,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "8151a2b74e0e37f3",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "Température eau (fishing/boat/+/water_temp)",
+        "topic": "fishing/boat/+/water_temp",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 220,
+        "y": 240,
+        "wires": [
+            [
+                "97fde4175943d6bc"
+            ]
+        ]
+    },
+    {
+        "id": "97fde4175943d6bc",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst p = msg.payload || {};\nconst token = global.get(\"api_token\");\n\nif (!token) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Token manquant\"});\n    return null;\n}\n\nmsg.payload = {\n    id_bateau: id_bateau,\n    temp_celsius: Number(p.temp_celsius) || 0,\n    horodatage: new Date().toISOString()\n};\n\nmsg.headers = {\n    \"Authorization\": \"Bearer \" + token,\n    \"Content-Type\": \"application/json\"\n};\n\nnode.status({fill:\"blue\", shape:\"dot\", text:\"Température envoyée\"});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 240,
+        "wires": [
+            [
+                "0b982b85638e1366"
+            ]
+        ]
+    },
+    {
+        "id": "0b982b85638e1366",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /telemetrie/temperature-eau",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/telemetrie/temperature-eau",
+        "x": 770,
+        "y": 240,
+        "wires": [
+            [
+                "222d2c7d205e32a3"
+            ]
+        ]
+    },
+    {
+        "id": "222d2c7d205e32a3",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat température",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 1010,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "220a5b9b36debd2d",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "Vent (fishing/boat/+/wind)",
+        "topic": "fishing/boat/+/wind",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 180,
+        "y": 320,
+        "wires": [
+            [
+                "1d952d9ce6245b2e"
+            ]
+        ]
+    },
+    {
+        "id": "1d952d9ce6245b2e",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst p = msg.payload || {};\nconst token = global.get(\"api_token\");\n\nif (!token) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"Token manquant\" });\n    return null;\n}\n\nmsg.payload = {\n    id_bateau: id_bateau,\n    vitesse_kmh: Number(p.vitesse_kmh) || 0,\n    direction_deg: Number(p.direction_deg) || 0,\n    horodatage: new Date().toISOString()\n};\n\nmsg.headers = {\n    \"Authorization\": \"Bearer \" + token,\n    \"Content-Type\": \"application/json\"\n};\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: \"Vent envoyé\" });\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 320,
+        "wires": [
+            [
+                "1eb12fa30962eeff"
+            ]
+        ]
+    },
+    {
+        "id": "1eb12fa30962eeff",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /telemetrie/vent",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/telemetrie/vent",
+        "x": 690,
+        "y": 320,
+        "wires": [
+            [
+                "b2225b7aaf6816f5"
+            ]
+        ]
+    },
+    {
+        "id": "b2225b7aaf6816f5",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat vent",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 900,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "118c7adc70e3d876",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "Turbidité (fishing/boat/+/turbidity)",
+        "topic": "fishing/boat/+/turbidity",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 210,
+        "y": 400,
+        "wires": [
+            [
+                "7b6c74d89530e544"
+            ]
+        ]
+    },
+    {
+        "id": "7b6c74d89530e544",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst p = msg.payload || {};\nconst token = global.get(\"api_token\");\n\nif (!token) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Token manquant\"});\n    return null;\n}\n\nmsg.payload = {\n    id_bateau: id_bateau,\n    ntu: Number(p.ntu) || 0,\n    horodatage: new Date().toISOString()\n};\n\nmsg.headers = {\n    \"Authorization\": \"Bearer \" + token,\n    \"Content-Type\": \"application/json\"\n};\n\nnode.status({fill:\"blue\", shape:\"dot\", text:\"Turbidité envoyée\"});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 400,
+        "wires": [
+            [
+                "793eac41abec7b7c"
+            ]
+        ]
+    },
+    {
+        "id": "793eac41abec7b7c",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /telemetrie/turbidite",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/telemetrie/turbidite",
+        "x": 720,
+        "y": 400,
+        "wires": [
+            [
+                "d04cecf3a6cd91c3"
+            ]
+        ]
+    },
+    {
+        "id": "d04cecf3a6cd91c3",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat turbidité",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 950,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "07122052f4b8b08a",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "Inclinaison (fishing/boat/+/tilt)",
+        "topic": "fishing/boat/+/tilt",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "inputs": 0,
+        "x": 190,
+        "y": 480,
+        "wires": [
+            [
+                "a747136c6ff0714d"
+            ]
+        ]
+    },
+    {
+        "id": "a747136c6ff0714d",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst p = msg.payload || {};\nconst token = global.get(\"api_token\");\n\nif (!token) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Token manquant\"});\n    return null;\n}\n\nmsg.payload = {\n    id_bateau: id_bateau,\n    angle_deg: Number(p.angle_deg) || 0,\n    risque_chavirement: Boolean(p.risque_chavirement),\n    horodatage: new Date().toISOString()\n};\n\nmsg.headers = {\n    \"Authorization\": \"Bearer \" + token,\n    \"Content-Type\": \"application/json\"\n};\n\nnode.status({fill:\"blue\", shape:\"dot\", text:\"Inclinaison envoyée\"});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 480,
+        "wires": [
+            [
+                "65ab58206ff6cc84"
+            ]
+        ]
+    },
+    {
+        "id": "65ab58206ff6cc84",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /telemetrie/inclinaison",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/telemetrie/inclinaison",
+        "x": 720,
+        "y": 480,
+        "wires": [
+            [
+                "c2f6c7eeee6d32bd"
+            ]
+        ]
+    },
+    {
+        "id": "c2f6c7eeee6d32bd",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat inclinaison (voir alerte_sos_creee)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 990,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "459071e2bb333af7",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "Captures (fishing/boat/+/catch)",
+        "topic": "fishing/boat/+/catch",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 190,
+        "y": 560,
+        "wires": [
+            [
+                "14fc9674e50a27e9"
+            ]
+        ]
+    },
+    {
+        "id": "14fc9674e50a27e9",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst p = msg.payload || {};\nconst token = global.get(\"api_token\");\n\nif (!token) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Token manquant\"});\n    return null;\n}\n\nmsg.payload = {\n    id_bateau: id_bateau,\n    espece: String(p.espece || \"inconnue\"),\n    poids_kg: Number(p.poids_kg) || 0,\n    quantite: Number(p.quantite) || 0,\n    gps_a_la_capture: {\n        lat: Number(p.gps_a_la_capture?.lat) || 0,\n        lng: Number(p.gps_a_la_capture?.lng) || 0\n    },\n    horodatage: new Date().toISOString()\n};\n\nmsg.headers = {\n    \"Authorization\": \"Bearer \" + token,\n    \"Content-Type\": \"application/json\"\n};\n\nnode.status({fill:\"blue\", shape:\"dot\", text:\"Capture envoyée\"});\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 560,
+        "wires": [
+            [
+                "fbf0707c57aeb22c"
+            ]
+        ]
+    },
+    {
+        "id": "fbf0707c57aeb22c",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /captures",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/captures",
+        "x": 690,
+        "y": 560,
+        "wires": [
+            [
+                "fec0ea9837082caf"
+            ]
+        ]
+    },
+    {
+        "id": "fec0ea9837082caf",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat capture",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 910,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "31050e2e071a20fa",
+        "type": "mqtt in",
+        "z": "a0a659f2972f2724",
+        "name": "SOS (fishing/boat/+/sos)",
+        "topic": "fishing/boat/+/sos",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local2",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 170,
+        "y": 640,
+        "wires": [
+            [
+                "1552c20d2214899a"
+            ]
+        ]
+    },
+    {
+        "id": "1552c20d2214899a",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "Construire le payload API",
+        "func": "const id_bateau = msg.topic.split('/')[2];\nconst gps = msg.payload;\n\nmsg.payload = { id_bateau: id_bateau, gps: gps };\n// Pas de token nécessaire : POST /alertes-sos est volontairement ouvert.\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 640,
+        "wires": [
+            [
+                "d3626c11701d185f"
+            ]
+        ]
+    },
+    {
+        "id": "d3626c11701d185f",
+        "type": "http request",
+        "z": "a0a659f2972f2724",
+        "name": "POST /alertes-sos",
+        "method": "POST",
+        "ret": "obj",
+        "url": "http://api:8000/alertes-sos",
+        "x": 650,
+        "y": 640,
+        "wires": [
+            [
+                "5639ee0ebbb35cc6"
+            ]
+        ]
+    },
+    {
+        "id": "5639ee0ebbb35cc6",
+        "type": "debug",
+        "z": "a0a659f2972f2724",
+        "name": "Résultat SOS",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 870,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "796c9f0cca970e3f",
+        "type": "inject",
+        "z": "a0a659f2972f2724",
+        "name": "test gps",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{   \"lat\": 43.295,   \"lng\": 5.412,   \"vitesse\": 12.5 }",
+        "payloadType": "json",
+        "x": 90,
+        "y": 160,
+        "wires": [
+            [
+                "4e4e88a4fdbbbb45"
+            ]
+        ]
+    },
+    {
+        "id": "4e4e88a4fdbbbb45",
+        "type": "function",
+        "z": "a0a659f2972f2724",
+        "name": "function 1",
+        "func": "// === Fonction de test GPS ===\nconst id_bateau = \"6a544c4d87bd06ac62e84725\";  // tu peux changer\n\nmsg.topic = \"fishing/boat/\" + id_bateau + \"/gps\";\n\nmsg.payload = {\n    lat: 43.295,\n    lng: 5.412,\n    vitesse: 12.5\n};\n\nmsg.headers = {}; // pas nécessaire ici\n\nnode.status({fill:\"green\", shape:\"dot\", text:\"Test GPS envoyé\"});\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 120,
+        "wires": [
+            [
+                "c56761bbbdfebd4d"
+            ]
+        ]
+    }
+]

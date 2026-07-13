@@ -1,20 +1,16 @@
 """
-À exécuter UNE SEULE FOIS : crée l'index unique sur "username" et un premier
-compte admin. Sans ce script, impossible de créer d'autres comptes admin/autorite
-(POST /auth/register-privilegie exige déjà d'être admin -> problème de l'oeuf et
-de la poule pour le tout premier compte).
+À exécuter UNE SEULE FOIS : crée le tout premier compte admin.
+Sans ce script, impossible de créer d'autres comptes admin/autorite
+(POST /auth/register-privilegie exige déjà d'être admin).
 
 Utilisation :
     docker exec -it sf_tools python bootstrap_admin.py <username> <password>
 """
 
 import sys
-import asyncio
-
 from pymongo import MongoClient
 from passlib.context import CryptContext
 from datetime import datetime, timezone
-import os
 
 if len(sys.argv) < 3:
     print("Usage : python bootstrap_admin.py <username> <password>")
@@ -22,11 +18,8 @@ if len(sys.argv) < 3:
 
 username, password = sys.argv[1], sys.argv[2]
 
-MONGO_URI = os.environ["MONGO_URI"]
-MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "smart_fishing")
-
-client = MongoClient(MONGO_URI)
-db = client[MONGO_DB_NAME]
+client = MongoClient("mongodb://mongo1:27017,mongo2:27017,mongo3:27017/", replicaSet="rs0")
+db = client["smart_fishing"]
 
 db.utilisateurs.create_index("username", unique=True)
 
