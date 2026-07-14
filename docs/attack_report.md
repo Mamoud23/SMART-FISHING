@@ -23,7 +23,7 @@ Ce rapport documente les 4 attaques réseau simulées sur l'infrastructure Smart
 
 ## 2.1 Lancement du Brocker Vulnerable
 
-![Broker vulnérable](images/Lancement_Broker_Vulnerable.png)
+![Broker vulnerable](images/Lancement_Broker_Vulnerable.png)
 
 Le broker est démarré avec la configuration `mosquitto_vuln.conf`, qui autorise les connexions anonymes sur le port 1883 sans aucun chiffrement. Cette configuration expose l'intégralité du trafic MQTT en clair, permettant à un attaquant sur le même réseau de capturer et lire toutes les données échangées.
 
