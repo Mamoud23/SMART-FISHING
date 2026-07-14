@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s     # Récupérer les métriques toutes les 15 secondes
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Étape 1 : S'auto-surveiller
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Étape 2 : Récupérer les métriques de votre API FastAPI (sf_api)
+  - job_name: "fastapi-api"
+    static_configs:
+      - targets: ["sf_api:8000"] # Utilise le nom de conteneur Docker défini dans docker-compose

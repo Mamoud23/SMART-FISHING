@@ -236,12 +236,47 @@ services:
       - api
     networks:
       - smart_fishing_net
+  
+  # ================= MONITORING =================
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: sf_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+    networks:
+      - smart_fishing_net
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: sf_grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000" # Mappé sur 3001 car votre "dashboard" utilise déjà le port 3000 !
+    volumes:
+      - grafana_data:/var/lib/grafana
+      # Injection automatique de la source de données Prometheus configurée à l'Étape 2
+      - ./prometheus/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin # Mot de passe administrateur par défaut
+    depends_on:
+      - prometheus
+    networks:
+      - smart_fishing_net
 
 volumes:
   mongo1_data:
   mongo2_data:
   mongo3_data:
   influxdb_data:
+  prometheus_data: # <-- Ajouté pour Prometheus
+  grafana_data:    # <-- Ajouté pour Grafana
 
 networks:
   smart_fishing_net:
