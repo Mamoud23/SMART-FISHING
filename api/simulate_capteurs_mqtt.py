@@ -1,42 +1,112 @@
+#!/usr/bin/env python3
 """
-Simule les 7 capteurs d'un bateau en PUBLIANT SUR MQTT (pas en appelant l'API
-directement) — contrairement à simulate_capteurs.py, ce script joue vraiment
-le rôle du capteur physique dans le pipeline complet :
+Simule les 7 capteurs d'un bateau en PUBLIANT SUR MQTT.
 
-    ce script --MQTT--> Mosquitto --> Node-RED --> ton API/InfluxDB
+Correctifs par rapport à la v2 :
+  1. Détection de port via socket brut (pas via mqtt.Client().connect(),
+     qui n'accepte pas de paramètre timeout et cassait la détection).
+  2. Vérification RÉELLE de la connexion : on attend le CONNACK via
+     on_connect avant de démarrer les capteurs. Si l'auth échoue
+     (mauvais user/mdp), le script l'affiche clairement et s'arrête —
+     il ne part plus "à l'aveugle".
+  3. Host / user / mot de passe / certificat configurables en CLI ou
+     variables d'environnement, plus besoin d'éditer le fichier pour
+     changer de broker.
 
-Utile pour tester le sandbox iot-test/ (Mosquitto + Node-RED) de bout en bout.
+Usage (broker vulnérable, port 1883, détection auto) :
+    docker exec -it sf_tools python simulate_capteurs_mqtt.py <id_bateau>
 
-⚠️ Seul le topic SOS a un flow Node-RED prêt (flows_sos.json). Les 6 autres
-topics sont publiés normalement, mais ne seront traités que si des flows
-Node-RED correspondants existent (cf. GUIDE_INTEGRATION_NODERED.md pour le
-détail de chaque flow à construire).
+Usage (broker sécurisé, port 8883, TLS + user/mdp) :
+    docker exec -it sf_tools python simulate_capteurs_mqtt.py <id_bateau> --user capteur_temp
 
-Utilisation (depuis le conteneur sf_tools, sur le même réseau que mosquitto) :
-
-    docker exec -it sf_tools python simulate_capteurs_mqtt.py <id_bateau> --vitesse 60
-
---vitesse 60 accélère le temps x60 (1 minute simulée = 1 seconde réelle).
-Arrête avec Ctrl+C.
+Variables d'environnement possibles (évite de taper les secrets en clair) :
+    MQTT_HOST, MQTT_USER, MQTT_PASSWORD, MQTT_CA_CERT
 """
 
 import argparse
+import getpass
 import json
+import os
 import random
+import socket
+import ssl
+import sys
 import threading
 import time
-from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
-BROKER_HOST = "localhost"
-BROKER_PORT = 1883
+DEFAULT_HOST = os.environ.get("MQTT_HOST", "localhost")
+DEFAULT_CA_CERT = os.environ.get("MQTT_CA_CERT", "/etc/mosquitto/ca.crt")
+CONNECT_TIMEOUT_S = 5  # temps max pour obtenir le CONNACK
 
 
-def se_connecter() -> mqtt.Client:
-    client = mqtt.Client()
-    client.connect(BROKER_HOST, BROKER_PORT, keepalive=60)
+def port_ouvert(host: str, port: int, timeout: float = 2.0) -> bool:
+    """Teste juste si un port TCP répond, sans se soucier du protocole applicatif."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def se_connecter(host: str, args) -> mqtt.Client:
+    """
+    Choisit le bon mode de connexion selon le port ouvert, puis attend
+    la confirmation réelle (CONNACK) avant de rendre la main. Quitte
+    proprement si la connexion/authentification échoue.
+    """
+    connecte = threading.Event()
+    echec = {"rc": None}
+
+    def on_connect(client, userdata, flags, rc, properties=None):
+        if rc == 0:
+            connecte.set()
+        else:
+            echec["rc"] = rc
+            connecte.set()
+
+    if port_ouvert(host, 1883):
+        print(f"[*] Port 1883 ouvert sur {host} -> broker vulnérable (connexion anonyme)")
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.connect(host, 1883, keepalive=60)
+
+    elif port_ouvert(host, 8883):
+        print(f"[*] Port 8883 ouvert sur {host} -> broker sécurisé (TLS + authentification)")
+        username = args.user or input("Nom d'utilisateur : ")
+        password = args.password or getpass.getpass("Mot de passe : ")
+
+        client = mqtt.Client()
+        client.username_pw_set(username, password)
+        client.tls_set(
+            ca_certs=args.ca_cert,
+            cert_reqs=ssl.CERT_REQUIRED,
+            tls_version=ssl.PROTOCOL_TLS_CLIENT,
+        )
+        client.on_connect = on_connect
+        client.connect(host, 8883, keepalive=60)
+
+    else:
+        print(f"[-] Aucun broker joignable sur {host}:1883 ni {host}:8883")
+        print("[*] Vérifie que Mosquitto/EMQX est lancé et que le host est correct")
+        print(f"    (host utilisé : '{host}' — sur Docker c'est souvent le nom du service, pas 'localhost')")
+        sys.exit(1)
+
     client.loop_start()
+
+    if not connecte.wait(timeout=CONNECT_TIMEOUT_S):
+        print("[-] Timeout : pas de réponse du broker (CONNACK jamais reçu)")
+        client.loop_stop()
+        sys.exit(1)
+
+    if echec["rc"] is not None:
+        print(f"[-] Connexion refusée par le broker (code retour {echec['rc']}) — "
+              f"vérifie le nom d'utilisateur / mot de passe / certificat")
+        client.loop_stop()
+        sys.exit(1)
+
+    print("[+] Connecté et authentifié avec succès.\n")
     return client
 
 
@@ -99,7 +169,6 @@ def boucle_captures(client, id_bateau, intervalle, arret):
 
 
 def boucle_sos(client, id_bateau, intervalle, arret, probabilite: float):
-    """SOS = événement rare, pas une fréquence fixe. On tire au sort à chaque tick."""
     while not arret.is_set():
         if random.random() < probabilite:
             publier(client, id_bateau, "sos", {
@@ -111,15 +180,17 @@ def boucle_sos(client, id_bateau, intervalle, arret, probabilite: float):
 
 def main():
     parser = argparse.ArgumentParser(description="Simule les 7 capteurs d'un bateau, publiés sur MQTT.")
-    parser.add_argument("id_bateau", help="Id du bateau à simuler (récupérable via GET /bateaux)")
-    parser.add_argument("--vitesse", type=float, default=1.0, help="Facteur d'accélération du temps (60 = 1min -> 1s)")
-    parser.add_argument("--proba-sos", type=float, default=0.01, help="Probabilité de déclenchement SOS à chaque vérification (par défaut 1%%)")
+    parser.add_argument("id_bateau", help="Id du bateau à simuler")
+    parser.add_argument("--host", default=DEFAULT_HOST, help=f"Host du broker (défaut: {DEFAULT_HOST}, ou variable MQTT_HOST)")
+    parser.add_argument("--user", default=os.environ.get("MQTT_USER"), help="Nom d'utilisateur (broker sécurisé)")
+    parser.add_argument("--password", default=os.environ.get("MQTT_PASSWORD"), help="Mot de passe (broker sécurisé)")
+    parser.add_argument("--ca-cert", default=DEFAULT_CA_CERT, help=f"Chemin du certificat CA (défaut: {DEFAULT_CA_CERT})")
+    parser.add_argument("--proba-sos", type=float, default=0.01, help="Probabilité de déclenchement SOS (défaut 1%%)")
     args = parser.parse_args()
 
-    client = se_connecter()
-    print(f"Connecté à {BROKER_HOST}:{BROKER_PORT}. Simulation MQTT du bateau {args.id_bateau} (vitesse x{args.vitesse})...\n")
+    client = se_connecter(args.host, args)
+    print(f"Simulation du bateau {args.id_bateau} en cours...\n")
 
-    # Fréquences personnalisées (en secondes)
     frequences = {
         "gps": 5,
         "inclinaison": 5,
@@ -129,7 +200,6 @@ def main():
         "captures": 30,
         "sos_check": 30,
     }
-
 
     arret = threading.Event()
     threads = [
