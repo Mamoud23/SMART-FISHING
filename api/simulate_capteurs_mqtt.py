@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
-BROKER_HOST = "mosquitto"
+BROKER_HOST = "localhost"
 BROKER_PORT = 1883
 
 
@@ -87,7 +87,7 @@ def boucle_inclinaison(client, id_bateau, intervalle, arret):
 
 
 def boucle_captures(client, id_bateau, intervalle, arret):
-    especes = ["Thiof", "Capitaine", "Bar", "Dorade", "Carpe rouge"]
+    especes = ["Thon", "Capitaine", "Bar", "Dorade", "Carpe rouge"]
     while not arret.is_set():
         publier(client, id_bateau, "catch", {
             "espece": random.choice(especes),
@@ -119,17 +119,17 @@ def main():
     client = se_connecter()
     print(f"Connecté à {BROKER_HOST}:{BROKER_PORT}. Simulation MQTT du bateau {args.id_bateau} (vitesse x{args.vitesse})...\n")
 
-    # Fréquences réelles (secondes), telles que définies dans le document de justification
+    # Fréquences personnalisées (en secondes)
     frequences = {
-        "gps": 60,
-        "temperature_eau": 300,
-        "vent": 300,
-        "turbidite": 600,
-        "inclinaison": 60,
-        "captures": 1800,
-        "sos_check": 30,  # fréquence de vérification, pas d'émission systématique
+        "gps": 5,
+        "inclinaison": 5,
+        "temperature_eau": 10,
+        "vent": 10,
+        "turbidite": 15,
+        "captures": 30,
+        "sos_check": 30,
     }
-    frequences = {k: v / args.vitesse for k, v in frequences.items()}
+
 
     arret = threading.Event()
     threads = [
