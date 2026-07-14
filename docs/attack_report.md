@@ -153,3 +153,30 @@ La même capture Wireshark, reproduite sur le port 8883, ne révèle plus aucun 
 
 Capture Wireshark sur le port 8883 : trafic chiffré (TLSv1.2/1.3, Application Data) — aucun topic ni payload n'est lisible
 
+
+## 9. Conclusion
+
+Les quatre scénarios d'attaque menés sur le broker MQTT non sécurisé (port 1883) ont tous abouti :
+
+- 🔴 **Sniffing** : interception en clair des données capteurs
+- 🔴 **Spoofing** : injection de fausses données sous une identité usurpée
+- 🔴 **Replay** : rejeu de messages authentiques
+- 🔴 **MITM** : falsification en temps réel via un proxy
+
+Ces résultats confirment qu'un broker MQTT déployé **sans TLS ni authentification** expose l'intégralité du système Smart Fishing à des risques opérationnels concrets : fausses alertes critiques, falsification de position de bateau, ou masquage d'une situation de détresse réelle.
+
+La configuration durcie testée (TLS + authentification par identifiants) bloque efficacement le sniffing et les connexions non autorisées, confirmant la pertinence de cette contre-mesure.
+
+Il reste toutefois recommandé de compléter ce dispositif par :
+
+- 🔒 **Authentification mutuelle par certificat (mTLS)**
+- 🔒 **Listes de contrôle d'accès (ACL) strictes** par topic et par capteur
+- 🔒 **Mécanisme anti-rejeu** (nonce, timestamp)
+
+Afin de couvrir l'ensemble des vecteurs d'attaque démontrés dans ce rapport.
+
+---
+
+**Rapport rédigé par :** RIST 1 — Chef de projet & Sécurité  
+**Date :** 14/07/2026  
+**Version :** 1.0
